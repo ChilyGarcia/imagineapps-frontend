@@ -7,6 +7,7 @@ import { useCategories } from "@/hooks/useCategories"
 import { CalendarIcon, MapPin, Users, DollarSign, Tag, FileText, Clock, Loader2, AlertCircle } from "lucide-react"
 import { AuthService } from "@/services/auth"
 import { useAuth } from "@/context/AuthContext"
+import { BACKEND_URL } from "@/config/env"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -91,11 +92,10 @@ export default function CreateEventPage() {
         throw new Error('No se encontró token de autenticación');
       }
       
-      // Usar directamente la URL de localhost:8000
-      const API_URL = 'http://localhost:8000';
+      // Usar la variable de entorno para la URL del backend
       console.log('Enviando evento:', eventData);
       
-      const response = await fetch(`${API_URL}/events`, {
+      const response = await fetch(`${BACKEND_URL}/events`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

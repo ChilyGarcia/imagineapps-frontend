@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { BACKEND_URL } from "@/config/env";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -76,7 +77,7 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/auth/register", {
+      const response = await fetch(`${BACKEND_URL}/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

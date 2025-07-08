@@ -1,6 +1,8 @@
 // services/auth.ts
 // Servicio para manejo de autenticación y token JWT
 
+import { BACKEND_URL } from "@/config/env";
+
 /**
  * Tipo para la respuesta del login
  */
@@ -17,7 +19,7 @@ export interface UserData {
   [key: string]: any; // Otros campos que pueda tener el usuario
 }
 
-const API_URL = "http://127.0.0.1:8000";
+// Usamos la variable de entorno definida en config/env.ts
 
 /**
  * Servicio de autenticación para manejar login y token JWT
@@ -27,7 +29,7 @@ export const AuthService = {
    * Iniciar sesión con username y password
    */
   login: async (username: string, password: string): Promise<AuthResponse> => {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await fetch(`${BACKEND_URL}/auth/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -100,7 +102,7 @@ export const AuthService = {
       ...AuthService.getAuthHeader(),
     };
 
-    const response = await fetch(url.startsWith('http') ? url : `${API_URL}${url}`, {
+    const response = await fetch(url.startsWith('http') ? url : `${BACKEND_URL}${url}`, {
       ...options,
       headers,
     });
