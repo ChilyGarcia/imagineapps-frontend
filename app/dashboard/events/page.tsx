@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { Calendar, Filter, Plus, Search, Trash2, MapPin, Clock, Users, Star } from "lucide-react"
+import { Calendar, Filter, Plus, Search, Trash2, MapPin, Users, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -29,7 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 
-// Datos de ejemplo mejorados
+// Datos de ejemplo - solo eventos del usuario actual
 const initialEvents = [
   {
     id: "1",
@@ -41,7 +41,7 @@ const initialEvents = [
     category: "Tecnología",
     attendees: 250,
     price: "Gratuito",
-    featured: true,
+    ownerId: "current-user", // ID del usuario actual
   },
   {
     id: "2",
@@ -53,7 +53,7 @@ const initialEvents = [
     category: "Artes",
     attendees: 150,
     price: "$25",
-    featured: false,
+    ownerId: "current-user", // ID del usuario actual
   },
   {
     id: "3",
@@ -65,7 +65,7 @@ const initialEvents = [
     category: "Negocios",
     attendees: 80,
     price: "$150",
-    featured: true,
+    ownerId: "current-user", // ID del usuario actual
   },
   {
     id: "4",
@@ -77,24 +77,106 @@ const initialEvents = [
     category: "Música",
     attendees: 500,
     price: "$45",
-    featured: false,
+    ownerId: "current-user", // ID del usuario actual
+  },
+  {
+    id: "5",
+    name: "Seminario de Inteligencia Artificial",
+    date: "2025-09-10",
+    description: "Seminario sobre las aplicaciones prácticas de la IA en diferentes industrias.",
+    location: "Universidad Tecnológica",
+    category: "Tecnología",
+    attendees: 200,
+    price: "$75",
+    ownerId: "current-user", // ID del usuario actual
+  },
+  {
+    id: "6",
+    name: "Taller de Pintura Abstracta",
+    date: "2025-09-22",
+    description: "Aprende técnicas avanzadas de pintura abstracta con artistas reconocidos.",
+    location: "Estudio de Arte Central",
+    category: "Artes",
+    attendees: 30,
+    price: "$120",
+    ownerId: "current-user", // ID del usuario actual
+  },
+  {
+    id: "7",
+    name: "Conferencia de Emprendimiento",
+    date: "2025-10-05",
+    description: "Evento para emprendedores con casos de éxito y networking.",
+    location: "Centro Empresarial",
+    category: "Negocios",
+    attendees: 300,
+    price: "$50",
+    ownerId: "current-user", // ID del usuario actual
+  },
+  {
+    id: "8",
+    name: "Concierto de Jazz",
+    date: "2025-10-18",
+    description: "Una noche mágica con los mejores músicos de jazz de la región.",
+    location: "Teatro Municipal",
+    category: "Música",
+    attendees: 400,
+    price: "$35",
+    ownerId: "current-user", // ID del usuario actual
   },
 ]
+
+const EVENTS_PER_PAGE = 6
 
 export default function EventsPage() {
   const [events, setEvents] = useState(initialEvents)
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("Todos")
+  const [dateFilter, setDateFilter] = useState("Todos")
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const currentUserId = "current-user" // En producción, esto vendría del contexto de autenticación
 
   const handleDeleteEvent = (id: string) => {
     setEvents(events.filter((event) => event.id !== id))
+    // Ajustar página si es necesario
+    const newTotalEvents = events.length - 1
+    const maxPage = Math.ceil(newTotalEvents / EVENTS_PER_PAGE)
+    if (currentPage > maxPage && maxPage > 0) {
+      setCurrentPage(maxPage)
+    }
   }
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch = event.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesCategory = categoryFilter === "Todos" || event.category === categoryFilter
-    return matchesSearch && matchesCategory
+
+    let matchesDate = true
+    if (dateFilter !== "Todos") {
+      const eventDate = new Date(event.date)
+      const now = new Date()
+      const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+      const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+
+      switch (dateFilter) {
+        case "Esta semana":
+          matchesDate = eventDate >= now && eventDate <= nextWeek
+          break
+        case "Este mes":
+          matchesDate = eventDate >= now && eventDate <= nextMonth
+          break
+        case "Pasados":
+          matchesDate = eventDate < now
+          break
+      }
+    }
+
+    return matchesSearch && matchesCategory && matchesDate && event.ownerId === currentUserId
   })
+
+  // Paginación
+  const totalPages = Math.ceil(filteredEvents.length / EVENTS_PER_PAGE)
+  const startIndex = (currentPage - 1) * EVENTS_PER_PAGE
+  const paginatedEvents = filteredEvents.slice(startIndex, startIndex + EVENTS_PER_PAGE)
 
   const getCategoryColor = (category: string) => {
     switch (category) {
@@ -148,8 +230,8 @@ export default function EventsPage() {
           </Button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        {/* Stats Cards - Solo 3 tarjetas */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card className="bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -161,36 +243,29 @@ export default function EventsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-green-600">Próximos</p>
-                  <p className="text-2xl font-bold text-green-900">3</p>
-                </div>
-                <Clock className="h-8 w-8 text-green-500" />
-              </div>
-            </CardContent>
-          </Card>
           <Card className="bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-purple-600">Asistentes</p>
-                  <p className="text-2xl font-bold text-purple-900">980</p>
+                  <p className="text-sm font-medium text-purple-600">Total Asistentes</p>
+                  <p className="text-2xl font-bold text-purple-900">
+                    {events.reduce((sum, event) => sum + event.attendees, 0)}
+                  </p>
                 </div>
                 <Users className="h-8 w-8 text-purple-500" />
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-gradient-to-r from-orange-50 to-red-50 border-orange-200">
+          <Card className="bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-orange-600">Destacados</p>
-                  <p className="text-2xl font-bold text-orange-900">2</p>
+                  <p className="text-sm font-medium text-green-600">Eventos Activos</p>
+                  <p className="text-2xl font-bold text-green-900">
+                    {events.filter((event) => new Date(event.date) >= new Date()).length}
+                  </p>
                 </div>
-                <Star className="h-8 w-8 text-orange-500" />
+                <Calendar className="h-8 w-8 text-green-500" />
               </div>
             </CardContent>
           </Card>
@@ -227,22 +302,32 @@ export default function EventsPage() {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <Select value={dateFilter} onValueChange={setDateFilter}>
+              <SelectTrigger className="w-full md:w-[200px] h-11 bg-gray-50 border-gray-200">
+                <Calendar className="mr-2 h-4 w-4" />
+                <SelectValue placeholder="Fecha" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Filtrar por fecha</SelectLabel>
+                  <SelectItem value="Todos">Todas las fechas</SelectItem>
+                  <SelectItem value="Esta semana">Esta semana</SelectItem>
+                  <SelectItem value="Este mes">Este mes</SelectItem>
+                  <SelectItem value="Pasados">Eventos pasados</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
 
       {/* Events Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredEvents.map((event) => (
+        {paginatedEvents.map((event) => (
           <Card
             key={event.id}
             className="group hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 bg-white border-0 shadow-md overflow-hidden"
           >
-            {event.featured && (
-              <div className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs font-bold px-3 py-1 text-center">
-                ⭐ EVENTO DESTACADO
-              </div>
-            )}
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1 min-w-0">
@@ -322,14 +407,15 @@ export default function EventsPage() {
           </Card>
         ))}
 
-        {filteredEvents.length === 0 && (
+        {paginatedEvents.length === 0 && (
           <div className="col-span-full flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center bg-white">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-indigo-100 to-purple-100">
               <Calendar className="h-10 w-10 text-indigo-600" />
             </div>
             <h2 className="mt-6 text-xl font-semibold text-gray-900">No se encontraron eventos</h2>
             <p className="mt-2 text-sm text-gray-600 max-w-sm">
-              No hay eventos que coincidan con tu búsqueda. Intenta con otros términos o crea un nuevo evento.
+              No hay eventos que coincidan con tus filtros. Intenta ajustar los criterios de búsqueda o crea un nuevo
+              evento.
             </p>
             <Button
               className="mt-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
@@ -343,6 +429,59 @@ export default function EventsPage() {
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <Card className="bg-white shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-600">
+                Mostrando {startIndex + 1} a {Math.min(startIndex + EVENTS_PER_PAGE, filteredEvents.length)} de{" "}
+                {filteredEvents.length} eventos
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="bg-transparent"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Anterior
+                </Button>
+                <div className="flex items-center space-x-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={
+                        currentPage === page
+                          ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white"
+                          : "bg-transparent"
+                      }
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="bg-transparent"
+                >
+                  Siguiente
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

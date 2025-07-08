@@ -1,6 +1,6 @@
 import type React from "react"
 import Link from "next/link"
-import { Calendar, Home, LogOut, Menu, Settings, User, Bell, Search } from "lucide-react"
+import { Calendar, Home, LogOut, Menu, Settings, User, Bell, Search, Globe } from "lucide-react"
 import { Suspense } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -35,15 +35,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
                 >
                   <Home className="h-5 w-5" />
-                  Inicio
+                  Panel Personal
                 </Link>
                 <Link
                   href="/dashboard/events"
                   className="flex items-center gap-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 text-indigo-700 font-medium"
                 >
                   <Calendar className="h-5 w-5" />
-                  Eventos
-                  <Badge className="ml-auto bg-indigo-100 text-indigo-700">12</Badge>
+                  Mis Eventos
+                  <Badge className="ml-auto bg-indigo-100 text-indigo-700">4</Badge>
+                </Link>
+                <Link
+                  href="/"
+                  className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
+                >
+                  <Globe className="h-5 w-5" />
+                  Eventos Públicos
                 </Link>
                 <Link
                   href="/dashboard/profile"
@@ -68,7 +75,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Calendar className="h-4 w-4 text-white" />
             </div>
             <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              EventManager
+              Panel Personal
             </span>
           </Link>
 
@@ -76,17 +83,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="relative hidden md:flex flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Buscar eventos..."
+                placeholder="Buscar en mis eventos..."
                 className="pl-10 bg-gray-50 border-gray-200 focus:bg-white transition-colors"
               />
             </div>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
+            <Button variant="ghost" asChild className="hidden md:flex">
+              <Link href="/">
+                <Globe className="mr-2 h-4 w-4" />
+                Ver Eventos Públicos
+              </Link>
+            </Button>
+
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 bg-red-500 text-white text-xs">
-                3
+                2
               </Badge>
               <span className="sr-only">Notifications</span>
             </Button>
@@ -143,15 +157,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
               >
                 <Home className="h-5 w-5" />
-                Inicio
+                Panel Personal
               </Link>
               <Link
                 href="/dashboard/events"
                 className="flex items-center gap-3 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50 px-3 py-2 text-indigo-700 font-medium"
               >
                 <Calendar className="h-5 w-5" />
-                Eventos
-                <Badge className="ml-auto bg-indigo-100 text-indigo-700 text-xs">12</Badge>
+                Mis Eventos
+                <Badge className="ml-auto bg-indigo-100 text-indigo-700 text-xs">4</Badge>
+              </Link>
+              <Link
+                href="/"
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-all"
+              >
+                <Globe className="h-5 w-5" />
+                Eventos Públicos
               </Link>
               <Link
                 href="/dashboard/profile"
