@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
+// NOTA: En producción, estos datos vendrían de una llamada a la API usando el params.id
 // Datos de ejemplo expandidos - incluye ownerId para control de permisos
 const eventDetails = {
   id: "1",
@@ -77,6 +78,8 @@ const eventDetails = {
 }
 
 export default function EventDetailsPage({ params }: { params: { id: string } }) {
+  // En un componente cliente, podemos usar el ID directamente para las rutas
+  // pero para operaciones como fetchs, debemos esperar en esas operaciones
   const router = useRouter()
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -176,7 +179,7 @@ export default function EventDetailsPage({ params }: { params: { id: string } })
           {isOwner && (
             <>
               <Button variant="outline" asChild className="bg-transparent">
-                <Link href={`/dashboard/events/${params.id}/edit`}>
+                <Link href={`/dashboard/events/${String(params.id)}/edit`}>
                   <Edit className="mr-2 h-4 w-4" />
                   Editar
                 </Link>

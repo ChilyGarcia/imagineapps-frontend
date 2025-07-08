@@ -1,9 +1,12 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { CalendarIcon, MapPin, Users, DollarSign, Tag, FileText, Clock } from "lucide-react"
+import { useCategories } from "@/hooks/useCategories"
+import { CalendarIcon, MapPin, Users, DollarSign, Tag, FileText, Clock, Loader2, AlertCircle } from "lucide-react"
+import { AuthService } from "@/services/auth"
+import { useAuth } from "@/context/AuthContext"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -14,20 +17,118 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Switch } from "@/components/ui/switch"
-import { format } from "date-fns"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { format, parse } from "date-fns"
 import { es } from "date-fns/locale"
 
 export default function CreateEventPage() {
   const router = useRouter()
+  const { user } = useAuth()
+  
+  // Estados del formulario
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [date, setDate] = useState<Date>()
-  const [isFeatured, setIsFeatured] = useState(false)
+  const [time, setTime] = useState('')
+  const [location, setLocation] = useState('')
+  const [category, setCategory] = useState('')
+  const [price, setPrice] = useState('')
+  
+  // Obtener categorías desde la API
+  const { categories, loading: loadingCategories, error: categoriesError } = useCategories()
   const [isOnline, setIsOnline] = useState(false)
+  const [isFeatured, setIsFeatured] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    // Aquí iría la lógica para guardar el evento
-    router.push("/dashboard/events")
-  }
+  // Estados para UI
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    
+    if (!date) {
+      setError('Por favor selecciona una fecha para el evento');
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      // Preparar los datos según el formato de la API
+      const eventDate = new Date(date);
+      let startTime = new Date(eventDate);
+      
+      if (time) {
+        const [hours, minutes] = time.split(':').map(Number);
+        startTime.setHours(hours, minutes);
+      }
+      
+      const endDate = new Date(startTime);
+      endDate.setHours(endDate.getHours() + 2); // Por defecto 2 horas después
+      
+      const categoryId = category ? parseInt(category) : 1; // Valor por defecto
+      const userId = user?.id || 0;
+      
+      // Formato exacto esperado por la API
+      const eventData = {
+        name: name,
+        description: description,
+        start_date: startTime.toISOString(),
+        end_date: endDate.toISOString(),
+        location: location,
+        category_id: categoryId,
+        user_id: userId,
+        start_time: startTime.toISOString(),
+        prize: price ? String(price) : '0'
+      };
+      
+      // Obtener el token y enviarlo en la cabecera de autorización
+      const token = AuthService.getToken();
+      
+      if (!token) {
+        throw new Error('No se encontró token de autenticación');
+      }
+      
+      // Usar directamente la URL de localhost:8000
+      const API_URL = 'http://localhost:8000';
+      console.log('Enviando evento:', eventData);
+      
+      const response = await fetch(`${API_URL}/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(eventData)
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Error al crear el evento: ${response.status} ${response.statusText}`);
+      }
+
+      const responseData = await response.json();
+      console.log('Evento creado exitosamente:', responseData);
+      
+      setSuccess(true);
+      // Redireccionar después de un tiempo breve
+      setTimeout(() => {
+        router.push('/dashboard/events');
+      }, 1500);
+      
+    } catch (err: any) {
+      setError(err.message || 'Ocurrió un error al crear el evento');
+      console.error('Error al crear evento:', err);
+      
+      if (err.message.includes('fetch')) {
+        setError('Error de conexión. Por favor verifica la URL de la API y tu conexión a internet.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -38,6 +139,22 @@ export default function CreateEventPage() {
         </h1>
         <p className="text-lg text-gray-600">Completa la información para crear tu evento</p>
       </div>
+
+      {/* Mensajes de error o éxito */}
+      {error && (
+        <Alert variant="destructive" className="border-red-600">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="ml-2">{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {success && (
+        <Alert className="bg-green-50 border-green-600 text-green-800">
+          <AlertDescription>
+            ¡Evento creado correctamente! Redireccionando...
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-8 lg:grid-cols-3">
         {/* Main Form */}
@@ -61,6 +178,8 @@ export default function CreateEventPage() {
                     id="name"
                     placeholder="Ej: Conferencia de Tecnología 2025"
                     required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     className="h-12 text-lg border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
                   />
                 </div>
@@ -101,6 +220,8 @@ export default function CreateEventPage() {
                       id="time"
                       type="time"
                       required
+                      value={time}
+                      onChange={(e) => setTime(e.target.value)}
                       className="h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </div>
@@ -115,6 +236,8 @@ export default function CreateEventPage() {
                     id="description"
                     placeholder="Describe tu evento: objetivos, agenda, público objetivo, beneficios para los asistentes..."
                     className="min-h-[140px] border-gray-200 focus:border-indigo-500 focus:ring-indigo-500 resize-none"
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
                     required
                   />
                 </div>
@@ -137,47 +260,40 @@ export default function CreateEventPage() {
                     id="location"
                     placeholder={isOnline ? "Enlace de la reunión virtual" : "Dirección del lugar o nombre del venue"}
                     required
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
                     className="h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                   />
                 </div>
 
-                {/* Category and Additional Info */}
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-3">
-                    <Label htmlFor="category" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <Tag className="h-4 w-4" />
-                      Categoría
-                    </Label>
-                    <Select required>
-                      <SelectTrigger id="category" className="h-12 border-gray-200 focus:border-indigo-500">
-                        <SelectValue placeholder="Selecciona una categoría" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tecnologia">💻 Tecnología</SelectItem>
-                        <SelectItem value="artes">🎨 Artes y Cultura</SelectItem>
-                        <SelectItem value="negocios">💼 Negocios y Emprendimiento</SelectItem>
-                        <SelectItem value="musica">🎵 Música y Entretenimiento</SelectItem>
-                        <SelectItem value="educacion">📚 Educación y Formación</SelectItem>
-                        <SelectItem value="deportes">⚽ Deportes y Fitness</SelectItem>
-                        <SelectItem value="salud">🏥 Salud y Bienestar</SelectItem>
-                        <SelectItem value="otro">📋 Otro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="capacity" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <Users className="h-4 w-4" />
-                      Capacidad Máxima
-                    </Label>
-                    <Input
-                      id="capacity"
-                      type="number"
-                      placeholder="100"
-                      min="1"
-                      className="h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
-                    />
-                  </div>
+                {/* Category */}
+                <div className="space-y-3">
+                  <Label htmlFor="category" className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <Tag className="h-4 w-4" />
+                    Categoría
+                  </Label>
+                  <Select value={category} onValueChange={setCategory} required>
+                    <SelectTrigger id="category" className="h-12 border-gray-200 focus:border-indigo-500">
+                      <SelectValue placeholder="Selecciona una categoría" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {loadingCategories ? (
+                        <SelectItem value="loading" disabled>
+                          Cargando categorías...
+                        </SelectItem>
+                      ) : categoriesError ? (
+                        <SelectItem value="error" disabled>
+                          Error al cargar categorías
+                        </SelectItem>
+                      ) : (
+                        categories.map((cat) => (
+                          <SelectItem key={cat.id} value={String(cat.id)}>
+                            {cat.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Price */}
@@ -194,6 +310,8 @@ export default function CreateEventPage() {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
+                      value={price}
+                      onChange={(e) => setPrice(e.target.value)}
                       className="pl-10 h-12 border-gray-200 focus:border-indigo-500 focus:ring-indigo-500"
                     />
                   </div>
@@ -207,9 +325,17 @@ export default function CreateEventPage() {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="px-8 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white"
                 >
-                  Crear Evento
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creando...
+                    </>
+                  ) : (
+                    "Crear Evento"
+                  )}
                 </Button>
               </CardFooter>
             </form>
